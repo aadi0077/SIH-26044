@@ -25,6 +25,7 @@ model Student {
   history      SkillHistory[]
   applications Application[]
   skillGaps    SkillGap[]
+  certifications Certification[]
 }
 
 model Industry {
@@ -73,6 +74,7 @@ model Skill {
   studentSkills     StudentSkill[]
   opportunitySkills OpportunitySkill[]
   skillGaps         SkillGap[]
+  certifications    Certification[]
 }
 
 model StudentSkill {
@@ -157,4 +159,26 @@ model SkillHistory {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId, recordedAt])
+}
+
+// Proof of learning: a completed course/bootcamp tied to ONE existing skill.
+// Scoring (fixed rule, no LLM): each certified skill adds +8 to its
+// dimension score (cap +16 per dimension). No course catalog needed —
+// certificates attach to the 27 skills in the Skill table.
+model Certification {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  skillId        Int
+  title          String
+  // NPTEL | Coursera | Udemy | AWS Academy | Google Cloud Skills | ...
+  provider       String
+  completedAt    TimestamptzString @default(now())
+  credentialUrl  String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, skillId])
+  @@index([studentId])
+  @@index([skillId])
 }

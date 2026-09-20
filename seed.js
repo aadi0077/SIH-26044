@@ -72,7 +72,7 @@ const OPP_TITLES = {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 async function wipe() {
   // FK-safe order: children before parents. id.gt(0) matches every row.
-  for (const model of ["SkillGap", "Application", "StudentSkill", "OpportunitySkill", "SkillHistory"]) {
+  for (const model of ["SkillGap", "Application", "StudentSkill", "OpportunitySkill", "SkillHistory", "Certification"]) {
     await db.orm.public[model].where((m) => m.id.gt(0)).deleteAll();
   }
   for (const model of ["Opportunity", "Student", "Industry", "Skill"]) {
@@ -297,6 +297,32 @@ async function main() {
   }
   await db.orm.public.SkillHistory.createAll(historyInputs);
   console.log(`  skillHistory: ${historyInputs.length}`);
+
+  // 8. Certifications: 0-3 per student on owned skills (strong skills first),
+  // each worth +8 dimension points via the portfolio rule.
+  const PROVIDERS = ["NPTEL", "Coursera", "Udemy", "AWS Academy", "Google Cloud Skills"];
+  const CERT_TITLES = ["Complete Course", "Specialization", "Professional Certificate", "Bootcamp"];
+  const ownedByStudent = new Map(); // studentId -> [{ skillId, proficiency }]
+  for (const r of deduped) {
+    if (!ownedByStudent.has(r.studentId)) ownedByStudent.set(r.studentId, []);
+    ownedByStudent.get(r.studentId).push(r);
+  }
+  const certInputs = [];
+  for (const s of students) {
+    const owned = (ownedByStudent.get(s.id) ?? []).sort((a, b) => b.proficiency - a.proficiency);
+    const n = s._role && starIds.has(s.id) ? 3 : faker.number.int({ min: 0, max: 3 });
+    for (const r of owned.slice(0, n)) {
+      certInputs.push({
+        studentId: s.id,
+        skillId: r.skillId,
+        title: `${skillNameById.get(r.skillId)} ${pick(CERT_TITLES)}`,
+        provider: pick(PROVIDERS),
+        completedAt: new Date(Date.now() - faker.number.int({ min: 10, max: 300 }) * 86400_000).toISOString(),
+      });
+    }
+  }
+  await db.orm.public.Certification.createAll(certInputs);
+  console.log(`  certifications: ${certInputs.length}`);
 
   console.log("Seed complete — dashboard data is ready.");
 }

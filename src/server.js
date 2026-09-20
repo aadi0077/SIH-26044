@@ -6,6 +6,7 @@ import { matchRoutes } from "./routes/matchRoutes.js";
 import { analyticsRoutes } from "./routes/analyticsRoutes.js";
 import { applicationRoutes } from "./routes/applicationRoutes.js";
 import { catalogRoutes } from "./routes/catalogRoutes.js";
+import { portfolioRoutes } from "./routes/portfolioRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => res.json({ ok: true, service: "sih-26044-match
 app.use("/api/match", matchRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/application", applicationRoutes);
+app.use("/api/portfolio", portfolioRoutes);
 app.use("/api", catalogRoutes);
 
 // 404 + centralized error handler (err.status from services => HTTP code).

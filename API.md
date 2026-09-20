@@ -28,10 +28,13 @@ with HTTP 400 (bad input) / 404 (unknown id) / 500 (server).
 - `GET /api/analytics/avg-skill-gap?role=Backend%20Developer` (`role` required) → `{ role, averageGap (nullable), samples }`
 - `GET /api/analytics/progress/:studentId` → `{ studentId, history: [{ recordedAt, overallRating, skillsSnapshot }] }` (line/radar chart; `skillsSnapshot` = `[{ skill, proficiency }]`; may be `[]` for students without history)
 
+### Portfolio (Player-Card stats — deterministic, no LLM)
+- `GET /api/portfolio/:studentId` → `{ student: { id, name, department, cgpa, targetRole }, overall (0–100), level (1–10), title (Rookie/Challenger/Pro/Elite/Legend), class ("<Top dimension> Specialist"), dimensions: [{ key, label, score, grade (S/A/B/C/D), owned, total, skills: [{ skill, proficiency }], certifications: [{ skill, title, provider }], projectMentions, breakdown: { base, certificatePoints, projectPoints } }], strengths: [{ skill, proficiency, dimension }] (top 3), nextUnlocks: [{ skill, gap, quest }] (from #1 match gaps) }`
+- Scoring: `100 × (0.6 × avgProficiency/10 + 0.4 × coverage) + min(16, 8 × certifiedSkills) + min(10, 5 × projectMentions)`, capped 100. Each certification = **+8** to its skill's dimension. Ready for bars + radar chart.
+
 ## 🚧 PLANNED — DO NOT build frontend for these yet (not implemented)
 
-- `Certification` model (title, provider, linked skill) + certificate points (+8 rule)
-- `GET /api/portfolio/:studentId` (Player-Card stats)
+- LLM prestige judging of certificates (future scope — fixed +8 rule above is what ships)
 - No LLM anywhere in the backend. There is no AI endpoint to call.
 
 Backend will notify when/if these land, with versioned doc updates. Anything not listed in FINALIZED above does not exist.

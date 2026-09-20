@@ -24,6 +24,7 @@ model Student {
   history      SkillHistory[]
   applications Application[]
   skillGaps    SkillGap[]
+  certifications Certification[]
 
   @@index([department])
   @@index([email])
@@ -71,6 +72,7 @@ model Skill {
   studentSkills     StudentSkill[]
   opportunitySkills OpportunitySkill[]
   skillGaps         SkillGap[]
+  certifications    Certification[]
 
   @@index([name])
 }
@@ -145,4 +147,20 @@ model SkillHistory {
   student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId, recordedAt])
+}
+
+model Certification {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  skillId       Int
+  title         String
+  provider      String
+  completedAt   DateTime @default(now()) @db.Timestamptz
+  credentialUrl String?
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skill         Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, skillId])
+  @@index([studentId])
+  @@index([skillId])
 }
