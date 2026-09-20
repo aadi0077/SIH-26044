@@ -1,0 +1,148 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Student {
+  id           Int                @id @default(autoincrement())
+  name         String
+  email        String             @unique
+  college      String             @default("AIT Pune")
+  department   String
+  cgpa         Float              @default(7.0)
+  gradYear     Int                @default(2026)
+  targetRole   String?
+  projects     String[]
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now()) @db.Timestamptz
+  updatedAt    DateTime           @updatedAt @db.Timestamptz
+  skills       StudentSkill[]
+  history      SkillHistory[]
+  applications Application[]
+  skillGaps    SkillGap[]
+
+  @@index([department])
+  @@index([email])
+}
+
+model Industry {
+  id            Int           @id @default(autoincrement())
+  name          String
+  email         String        @unique
+  sector        String
+  city          String?
+  website       String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @db.Timestamptz
+  opportunities Opportunity[]
+
+  @@index([sector])
+}
+
+model Opportunity {
+  id             Int                @id @default(autoincrement())
+  title          String
+  description    String?
+  type           String             @default("JOB") // JOB, INTERNSHIP, FDP
+  industryId     Int
+  minCgpa        Float              @default(0)
+  targetRole     String?
+  isOpen         Boolean            @default(true)
+  createdAt      DateTime           @default(now()) @db.Timestamptz
+  updatedAt      DateTime           @updatedAt @db.Timestamptz
+  industry       Industry           @relation(fields: [industryId], references: [id], onDelete: Cascade)
+  requiredSkills OpportunitySkill[]
+  applications   Application[]
+  skillGaps      SkillGap[]
+
+  @@index([industryId])
+  @@index([isOpen])
+  @@index([targetRole])
+}
+
+model Skill {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  category          String             @default("TECHNICAL")
+  studentSkills     StudentSkill[]
+  opportunitySkills OpportunitySkill[]
+  skillGaps         SkillGap[]
+
+  @@index([name])
+}
+
+model StudentSkill {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  skillId     Int
+  proficiency Int // 1 to 10
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, skillId])
+  @@index([studentId])
+  @@index([skillId])
+}
+
+model OpportunitySkill {
+  id             Int         @id @default(autoincrement())
+  opportunityId  Int
+  skillId        Int
+  weightage      Float // Relative weight/importance (e.g. 1.0 - 5.0)
+  minProficiency Int         @default(5) // Desired proficiency level 1-10
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill          Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, skillId])
+  @@index([opportunityId])
+  @@index([skillId])
+}
+
+model Application {
+  id            Int         @id @default(autoincrement())
+  studentId     Int
+  opportunityId Int
+  matchScore    Float // Pre-calculated or calculated score (0-100)
+  status        String      @default("PENDING") // PENDING, SHORTLISTED, SELECTED, REJECTED
+  coverLetter   String?
+  appliedAt     DateTime    @default(now()) @db.Timestamptz
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, opportunityId])
+  @@index([studentId])
+  @@index([opportunityId])
+  @@index([status])
+}
+
+model SkillGap {
+  id            Int         @id @default(autoincrement())
+  studentId     Int
+  opportunityId Int
+  skillId       Int
+  requiredLevel Int
+  currentLevel  Int
+  gapSize       Int // requiredLevel - currentLevel
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill         Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, opportunityId, skillId])
+  @@index([studentId, opportunityId])
+  @@index([skillId])
+}
+
+model SkillHistory {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  recordedAt     DateTime @default(now()) @db.Timestamptz
+  overallRating  Int // aggregate rating (1-10)
+  skillsSnapshot Json // JSON representation of { skillName: proficiency }
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, recordedAt])
+}

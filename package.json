@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@prisma/client": "^6.19.3",
+    "@prisma/orm-postgres": "^8.0.0-rc.11",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "prisma": "8.0.0-rc.15"
+  },
+  "scripts": {
+    "postinstall": "prisma skills sync || exit 0",
+    "contract:emit": "prisma contract emit",
+    "db:up": "docker compose up -d",
+    "db:init": "prisma db init",
+    "db:verify": "prisma db verify",
+    "seed": "node seed.js",
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@prisma/cli-engine": "^0.4.0",
+    "@types/node": "^26.6.2"
+  }
+}

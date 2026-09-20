@@ -1,0 +1,160 @@
+// use prisma-8
+
+// ─── SIH 2026 PS-26044: Academia-Industry Collaboration ───
+// Database module: Students, Industries, Opportunities, Skills,
+// junction tables (with proficiency/weightage), Applications,
+// SkillGap and SkillHistory (progress tracking for analytics).
+
+model Student {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  college    String   @default("AIT Pune")
+  department String
+  cgpa       Float    @default(7)
+  gradYear   Int      @default(2026)
+  targetRole String?
+  // text[] — e.g. ["Cloud kitchen ordering app (MERN)", ...]; used by the
+  // match bonus for project relevance.
+  projects   String[]
+  isActive   Boolean  @default(true)
+  createdAt  TimestamptzString @default(now())
+  updatedAt  temporal.updatedAtString()
+
+  skills       StudentSkill[]
+  history      SkillHistory[]
+  applications Application[]
+  skillGaps    SkillGap[]
+}
+
+model Industry {
+  id      Int      @id @default(autoincrement())
+  name    String
+  email   String   @unique
+  sector  String
+  city    String?
+  website String?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  // JOB | INTERNSHIP | FDP
+  type        String   @default("JOB")
+  industryId  Int
+  minCgpa     Float    @default(0)
+  targetRole  String?
+  isOpen      Boolean  @default(true)
+  createdAt   TimestamptzString @default(now())
+  updatedAt   temporal.updatedAtString()
+
+  industry       Industry           @relation(fields: [industryId], references: [id], onDelete: Cascade)
+  requiredSkills OpportunitySkill[]
+  applications   Application[]
+  skillGaps      SkillGap[]
+
+  @@index([industryId])
+  @@index([isOpen])
+}
+
+model Skill {
+  id       Int    @id @default(autoincrement())
+  // Unique constraint creates a unique btree index on name — this is the
+  // index the matching engine relies on for skill lookups/resolution.
+  name     String @unique
+  // TECHNICAL | SOFT | DOMAIN
+  category String @default("TECHNICAL")
+
+  studentSkills     StudentSkill[]
+  opportunitySkills OpportunitySkill[]
+  skillGaps         SkillGap[]
+}
+
+model StudentSkill {
+  id          Int @id @default(autoincrement())
+  studentId   Int
+  skillId     Int
+  // Self-assessed proficiency, 1-10 (validated at app layer).
+  proficiency Int
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, skillId])
+  @@index([studentId])
+  @@index([skillId])
+}
+
+model OpportunitySkill {
+  id             Int   @id @default(autoincrement())
+  opportunityId  Int
+  skillId        Int
+  // Relative importance of this skill to the opportunity (1-5).
+  weightage      Float
+  // Level the candidate should demonstrate (1-10).
+  minProficiency Int   @default(5)
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, skillId])
+  @@index([opportunityId])
+  @@index([skillId])
+}
+
+model Application {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  opportunityId Int
+  // Snapshot of the Smart Match score (0-100) at application time.
+  matchScore    Float
+  // PENDING | SHORTLISTED | SELECTED | REJECTED
+  status        String   @default("PENDING")
+  coverLetter   String?
+  appliedAt     TimestamptzString @default(now())
+
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, opportunityId])
+  @@index([studentId])
+  @@index([opportunityId])
+  @@index([status])
+}
+
+model SkillGap {
+  id            Int @id @default(autoincrement())
+  studentId     Int
+  opportunityId Int
+  skillId       Int
+  requiredLevel Int
+  currentLevel  Int
+  // requiredLevel - currentLevel (>0 means deficient).
+  gapSize       Int
+
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, opportunityId, skillId])
+  @@index([skillId])
+}
+
+// Progress over time for analytics (student growth curves, cohort trends).
+model SkillHistory {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  recordedAt     TimestamptzString @default(now())
+  overallRating  Int
+  // [{ skill: "React", proficiency: 7 }, ...]
+  skillsSnapshot Json
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, recordedAt])
+}
